@@ -8,10 +8,11 @@ import CityPack from './pages/CityPack';
 import Compare from './pages/Compare';
 import Incentives from './pages/Incentives';
 import Providers from './pages/Providers';
+import Submit from './pages/Submit';
 import Method from './pages/Method';
 
 const TABS = {
-  Overview, Registry, 'City pack': CityPack, 'Compare cities': Compare, 'State incentives': Incentives, Providers, Method,
+  Overview, Registry, 'City pack': CityPack, 'Compare cities': Compare, 'State incentives': Incentives, Providers, Submit, Method,
 };
 type Tab = keyof typeof TABS;
 
