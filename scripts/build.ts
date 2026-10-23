@@ -4,6 +4,7 @@
 import { writeFileSync, existsSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { readCsv } from './csv';
+import { dbEnabled, readTable } from './db';
 import { REGISTERS, loadRegister } from './registers';
 import { DATE_RE, TIER, resolveGroup, rankProviders, level } from '../src/logic';
 import type { Claim, Db, FactGroup, Row, Site } from '../src/types';
@@ -58,15 +59,16 @@ const SPEC: Record<string, { cols: string[]; req: string[]; enums?: Record<strin
 // Units every count must carry, so company/entity/site numbers are never mixed.
 const COUNT_UNITS = ['company', 'entity', 'site', 'unstated'];
 
-function build() {
+async function build() {
   const errors: string[] = [];
   const warnings: string[] = [];
   const t: Record<string, Row[]> = {};
 
   for (const [name, spec] of Object.entries(SPEC)) {
     const file = new URL(`${name}.csv`, DATA);
-    if (!existsSync(file)) { errors.push(`data/${name}.csv is missing`); t[name] = []; continue; }
-    const { rows, headers } = readCsv(file);
+    // Supabase is the source of truth when configured; CSVs remain the offline fallback.
+    if (!dbEnabled && !existsSync(file)) { errors.push(`data/${name}.csv is missing`); t[name] = []; continue; }
+    const { rows, headers } = dbEnabled ? { rows: await readTable(name, spec.cols[0]), headers: spec.cols } : readCsv(file);
     if (headers.join() !== spec.cols.join()) {
       errors.push(`data/${name}.csv headers must be: ${spec.cols.join(',')}\n    found: ${headers.join(',')}`);
     }
@@ -268,4 +270,4 @@ function selftest() {
 }
 
 if (process.argv.includes('--selftest')) selftest();
-else build();
+else await build();
