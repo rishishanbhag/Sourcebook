@@ -1,0 +1,5 @@
+engagement_id,provider_id,site_id,parent_id,service,status,anonymised
+en_ansr_ferguson,pv_ansr,s_ferguson_blr,p_ferguson,"GCC setup and operation (centre launched as ""powered by ANSR"")",gcc_confirmed,n
+en_ansr_target,pv_ansr,dir_target_blr,dir_target,GCC partner (client testimonial on provider site),self_reported,n
+en_ansr_lowes,pv_ansr,dir_lowe_blr,dir_lowe,GCC partner (client video testimonial on provider site),self_reported,n
+en_tta_n2g,pv_tta,,p_n2g,"Entity incorporation, intercompany agreements, regulatory advice for a new GCC",self_reported,n

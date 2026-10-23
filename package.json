@@ -1,0 +1,32 @@
+{
+  "name": "gcc-source-of-truth",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm run build:data && vite",
+    "build:data": "tsx scripts/build.ts",
+    "import:mca": "tsx scripts/import-mca.ts",
+    "match": "tsx scripts/match.ts",
+    "test": "tsx scripts/build.ts --selftest && tsx scripts/match.ts --selftest && tsx scripts/import-mca.ts --selftest && tsx scripts/load-directories.ts --selftest && tsx scripts/gleif.ts --selftest",
+    "load:dirs": "tsx scripts/load-directories.ts",
+    "gleif": "tsx scripts/gleif.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "papaparse": "5.4.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.1.4",
+    "@types/node": "22.10.2",
+    "@types/papaparse": "5.3.15",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@vitejs/plugin-react": "4.3.4",
+    "tailwindcss": "4.1.4",
+    "tsx": "4.19.2",
+    "typescript": "5.7.2",
+    "vite": "6.0.5"
+  }
+}
