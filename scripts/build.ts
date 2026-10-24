@@ -1,7 +1,7 @@
 // Reads data/*.csv, validates every row, resolves claims, writes public/db.json.
 // Fails (exit 1) on any error so bad data never reaches the UI.
 // `--selftest` checks the resolution rules on fixtures instead.
-import { writeFileSync, existsSync } from 'node:fs';
+import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { readCsv } from './csv';
 import { dbEnabled, readTable } from './db';
@@ -225,6 +225,7 @@ async function build() {
     sources, parents: t.parents, entities: t.entities, sites, cities: t.cities, policies: t.policies,
     providers: t.providers, engagements: t.engagements, facts, coverage: { sites: sites.length, reference },
   };
+  mkdirSync(new URL('../public/', import.meta.url), { recursive: true }); // public/ is not in git, so a fresh checkout lacks it
   writeFileSync(new URL('../public/db.json', import.meta.url), JSON.stringify(db));
   warnings.forEach((w) => console.warn(`  warn: ${w}`));
   console.log(`db.json written: ${t.parents.length} parents, ${t.entities.length} entities, ${sites.length} sites, ` +
