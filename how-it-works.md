@@ -1,6 +1,6 @@
 # How it works
 
-India GCC Registry: a private, local tool that records facts about India's Global Capability Centres (GCCs), with the source behind every fact.
+India GCC Registry: a private tool that records facts about India's Global Capability Centres (GCCs), with the source behind every fact.
 
 ## 1. Is this "the exact single source of truth"?
 
@@ -38,7 +38,9 @@ What it is not: a verified, complete or authoritative list. Today:
  public/db.json  ──►  Vite + React + Tailwind app at http://127.0.0.1:5173
 ```
 
-There is no server and no database engine. The CSV files in `data/` **are** the database. You can open them in Excel or Google Sheets. `build.ts` turns them into one JSON file, and the browser reads it. The app only runs on your machine.
+The CSV files in `data/` are the original database and still work offline: open them in Excel or Google Sheets. Data now also lives in **Supabase (Postgres)**, which `build.ts` reads when `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` are set in `.env` (otherwise it falls back to the CSVs). Either way `build.ts` turns the data into one JSON file, and the browser reads that file. The public submission form is the only part that writes to the database from the browser's side. See section 15.
+
+Caveat: the writer scripts (`load-directories`, `import-mca`, `match`, `gleif`) still write CSV files, not the database. Until they are switched, run `npm run import:db` after using one so the database catches up.
 
 ## 3. Where the data comes from today
 
@@ -137,7 +139,7 @@ Filters a company master CSV you download into `data/raw/`:
 
 ## 9. The app (`src/`)
 
-One page with seven tabs, built with React and Tailwind CSS in plain black and white (no colour; emphasis comes from weight, borders and fill). Shared pieces live in `src/components/ui.tsx` (tabs, tables, badges, cards, filters). The data comes from `public/db.json`, loaded once.
+One page with eight tabs, built with React and Tailwind CSS in plain black and white (no colour; emphasis comes from weight, borders and fill). Shared pieces live in `src/components/ui.tsx` (tabs, tables, badges, cards, filters). The data comes from `public/db.json`, loaded once.
 
 **How every value looks.** Each value is a `<Fact>` (`src/Fact.tsx`): the value, then small badges, then an always-visible line "as reported by [publisher] · [date]". Click the value to open every claim behind it: value, unit, source link, date, method, page, exact quote, the source's commercial interest, the source's note, the date it was read, and a "Suggest a correction" link. Badges:
 
@@ -191,7 +193,16 @@ States side by side: columns are the policies (Karnataka, Maharashtra, Gujarat),
 
 Providers that have at least one engagement with evidence (today ANSR and TT&A), ranked by 3 x engagements confirmed by the GCC + 1 x self-reported, ties by name; a category filter narrows the list. The table shows Confirmed, Self-reported and Disputed counts side by side, never summed. Under it, one evidence table per provider lists each engagement: the client (or "Anonymised, not attributed"), the city (or "Not stated"), the service, the status and the evidence claim with its source. A claim made only by the provider is never shown as confirmed: the Ferguson engagement is confirmed because Ferguson itself announced it; Target, Lowe's and N2G are self-reported. Providers with no evidence are not listed. Paid placement does not exist and cannot change the order.
 
-### Tab 7: Method
+### Tab 7: Submit
+
+A public form where anyone can send a report or a provider engagement. It never publishes anything by itself: a submission is stored as `pending` and shown only after you approve it (section 15).
+
+- **Report a figure:** about (parent, entity, site, city, policy, provider or ecosystem), subject id, field, value, unit, period.
+- **Report a provider engagement:** provider (picked from the list), service, whether the client is anonymised, and the client if named.
+- Every submission needs a **source link or a quote**. Contact email is optional and never shown.
+- It calls the `submit` function (section 15), which validates it and rate-limits it. Errors from the function are shown on the page.
+
+### Tab 8: Method
 
 A plain-language rulebook inside the app, with the same numbers the code uses (the tier weights and the 24-month staleness limit are read from `src/logic.ts`, so the page cannot drift). Nine items: units (company, entity, site), receipts, disagreements, confidence, matching names, providers, corrections, what is not stored, and coverage.
 
@@ -203,7 +214,7 @@ Provider ranking = `confirmed engagements × 3 + self-reported × 1`, ties broke
 
 Company-level, professional information only: companies, legal entities, city-level sites, provider firms. **No** director names, personal emails or phone numbers, or LinkedIn data. LinkedIn scraping is avoided because it breaks their terms.
 
-Not yet resolved, so keep the app private: India's DPDP Act for any personal data in submissions; whether quoting these directories and paid reports is allowed; whether publishing "disputed" labels on providers carries defamation risk; each source's terms of use.
+Not yet resolved, so keep the app private: India's DPDP Act for any personal data in submissions (the form stores an optional contact email and a hashed IP address; neither is shown on the site); whether quoting these directories and paid reports is allowed; whether publishing "disputed" labels on providers carries defamation risk; each source's terms of use.
 
 ## 12. Why "0" appeared, and what is still empty
 
@@ -222,10 +233,56 @@ The CSVs started with only the brief's headline figures, so there were no sites,
 | Command | Does |
 |---|---|
 | `npm run dev` | Rebuild data, then open the app at http://127.0.0.1:5173 |
-| `npm run build:data` | Validate everything and write `public/db.json` |
+| `npm run build:data` | Validate everything and write `public/db.json` (reads Supabase if configured, else the CSVs) |
+| `npm run build` | `build:data`, then the production build of the app into `dist/` |
+| `npm run import:db` | Copy `data/*.csv` into Supabase (safe to repeat; it updates rows, it does not delete) |
+| `npm run approve -- <id>` | Approve pending submission `<id>`: creates its source and claim (or engagement) and, if `BUILD_HOOK_URL` is set, triggers a rebuild. Add `--reject` to reject it instead |
 | `npm run gleif` | Ask GLEIF's free API for Indian legal entities (with CINs) matching each parent; writes `data/gleif_candidates.csv` for you to review |
 | `npm run load:dirs` | Rebuild the directory-derived rows (Bengaluru and Pune) from `data/raw/*.txt` |
 | `npm run import:mca -- data/raw/<file>.csv` | Filter a downloaded MCA file |
 | `npm run match` | Score entity pairs and manage the review queue |
 | `npm test` | Self-checks for confidence rules, matching, MCA filter, directory loader |
 | `npm run typecheck` | TypeScript check |
+
+## 15. Database and public submissions
+
+**Why.** The site is meant to be deployed and to accept reports and engagements from the public, which a folder of CSVs cannot do.
+
+**Pieces**
+
+| Piece | File | Job |
+|---|---|---|
+| Schema | `supabase/schema.sql` | One table per CSV (same columns, all text) plus `submissions`. Row-level security is on with no public access, so only the service key can read or write |
+| Import | `scripts/csv-to-db.ts` | Copies the CSVs into Supabase and checks row counts |
+| Access layer | `scripts/db.ts` | `readTable` / `writeTable`, same row shape as `scripts/csv.ts`. Rows come back ordered by id, not CSV order |
+| Build | `scripts/build.ts` | Reads Supabase when configured, then does the same validation and confidence scoring as before and writes `public/db.json`. The site still reads only that file |
+| Intake | `supabase/functions/submit/index.ts` | The public endpoint (a Supabase Edge Function) |
+| Form | `src/pages/Submit.tsx` | The Submit tab |
+| Review | `scripts/approve-submission.ts` | Approve or reject a pending submission |
+
+**Flow**
+
+```
+ browser form ──► submit function ──► submissions table (status: pending)
+                  (validate, limit)                  │
+                                                     ▼
+                              you run: npm run approve -- <id>
+                                                     │
+                       creates source "sub_<id>" (type submission) + claim / engagement
+                                                     ▼
+                      npm run build:data (or the host's build hook) ──► public/db.json
+```
+
+**What the submit function checks.** The request must be a POST under 8 KB. It must have a source link (http/https) or a quote. For a report: a known subject type, plus subject, field and value; any `*_count` field needs a unit and a period; the period must look like a year or date. For an engagement: a provider, an anonymised yes/no, and an anonymised engagement may not name a client. It allows **5 submissions per hour per IP address** (the IP is stored only as a salted hash) and answers 429 beyond that. The browser holds only the public anon key, which cannot read or write any table directly (tested).
+
+**What approving does.**
+- The submitter becomes a source of type `submission` (confidence weight 0.4), so approved public input shows as **Low** confidence unless other sources agree.
+- A report becomes one claim with `method = submission`.
+- An engagement becomes an engagement with status `self_reported` plus one claim. A submission alone never makes it `gcc_confirmed`; you can promote it by hand once you have verified the submitter.
+- `build.ts` checks everything again, so an approval with a bad subject id fails the build and publishes nothing.
+
+**Known limits**
+- **No captcha yet.** Only the rate limit stands in the way of spam, and spam only reaches your review queue, never the site. Add Cloudflare Turnstile before the site goes public (marked `shortcut:` in the function).
+- The function allows requests from any origin (`Access-Control-Allow-Origin: *`); restrict it to the site's address at launch.
+- Approval is manual: run `npm run approve -- <id>`, then `npm run build:data` and redeploy. After the site is deployed, set `BUILD_HOOK_URL` (the host's build-hook address) and approving will rebuild the site automatically.
+- Submissions are reviewed one at a time in the Supabase table editor; there is no admin page yet.
