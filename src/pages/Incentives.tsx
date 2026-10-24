@@ -17,11 +17,11 @@ export default function Incentives() {
       ))]}>
         {fields.map((f) => (
           <tr key={f}>
-            <Td className="font-medium">{label(f)}</Td>
+            <Td className="sticky left-0 bg-white font-medium">{label(f)}</Td>
             {policies.map((p) => {
               const gs = facts[`policy:${p.policy_id}`]?.[f];
               return (
-                <Td key={p.policy_id}>
+                <Td key={p.policy_id} className="min-w-44">
                   {gs ? gs.map((g) => <Fact key={g.unit + g.period} g={g} />) : <span className="text-neutral-500">No published figure</span>}
                 </Td>
               );

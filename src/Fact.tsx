@@ -30,7 +30,7 @@ export function Fact({ g }: { g: FactGroup }) {
         {g.status === 'disputed' && <Badge kind="disputed" />}
         <Badge kind={g.level} title={`confidence ${g.confidence}`} />
         {unverified && <Badge kind="unverified" />}
-        <span className="block pl-4 text-xs text-neutral-500">as reported by {publishers} · {g.preferred.source_date}</span>
+        <span className="hidden pl-4 text-xs text-neutral-500 sm:block">as reported by {publishers} · {g.preferred.source_date}</span>
       </summary>
       <ul className="my-2 ml-4 list-disc space-y-2 pl-4 text-xs">
         {g.claims.map((c) => {
@@ -61,10 +61,10 @@ export function FactTable({ subject, empty = 'No sourced facts yet.' }: { subjec
   const groups = Object.values(facts[subject] ?? {}).flat();
   if (!groups.length) return <Muted>{empty}</Muted>;
   return (
-    <Table head={['Field', 'Unit', 'Period', 'Value and sources']}>
+    <Table head={['Field', 'Value (tap for sources)']}>
       {groups.map((g) => (
         <tr key={g.field + g.unit + g.period}>
-          <Td>{label(g.field)}</Td><Td>{g.unit || '-'}</Td><Td>{g.period || '-'}</Td><Td><Fact g={g} /></Td>
+          <Td>{label(g.field)}<span className="block text-xs text-neutral-500">{[g.unit, g.period].filter(Boolean).join(' · ')}</span></Td><Td><Fact g={g} /></Td>
         </tr>
       ))}
     </Table>
