@@ -1,4 +1,9 @@
 @import "tailwindcss" source("../src");
 
+@theme {
+  --font-sans: "Gabarito", sans-serif;
+  --font-mono: "Gabarito", sans-serif;
+}
+
 :root { color-scheme: light; }
 body { background: #fff; color: #000; -webkit-font-smoothing: antialiased; }
