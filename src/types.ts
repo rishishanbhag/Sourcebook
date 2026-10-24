@@ -1,9 +1,6 @@
 // Row shapes mirror the CSV headers in data/. All values are strings as parsed.
 export type Row = Record<string, string>;
 
-export type SourceType =
-  | 'govt' | 'industry_body' | 'consultant' | 'broker' | 'press' | 'company' | 'gcc' | 'submission';
-
 export interface Claim {
   claim_id: string;
   subject_type: string;
