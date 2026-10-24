@@ -9,13 +9,17 @@ import type { Row } from '../src/types';
 const DATA = new URL('../data/', import.meta.url);
 const RETRIEVED = '2026-10-23';
 
-const FLEXIPLE = { file: 'flexiple_blr.txt', city: 'blr', cityName: 'Bengaluru', source: 'dir_flexiple', name: 'Flexiple: GCC directory (Bengaluru and Pune lists)',
+const FLEXIPLE = { file: 'flexiple_blr.txt', city: 'blr', cityName: 'Bengaluru', source: 'dir_flexiple', name: 'Flexiple: GCC directory (city lists)',
     publisher: 'Flexiple', url: 'https://flexiple.com/global-capability-centers/list-of-global-capability-centers-in-bengaluru',
     interest: 'Flexiple sells hiring and talent services to GCCs; directory is marketing content',
-    note: 'Public web pages read once on ' + RETRIEVED + '; terms not checked. Bengaluru page lists 437, only first 248 read. Pune page: all 169 read (https://flexiple.com/global-capability-centers/list-of-global-capability-centers-in-pune).' };
+    note: 'Public web pages read once on ' + RETRIEVED + '; terms not checked. Bengaluru page lists 437, only first 248 read. Pune page: all 169 read. Mumbai lists 283, 276 read. Hyderabad lists 299, all 299 read from a saved copy of the full page. Chennai lists 244, all read. City pages: https://flexiple.com/global-capability-centers/list-of-global-capability-centers-in-pune (same pattern for hyderabad, chennai; Mumbai is /global-capability-centers-in-mumbai).' };
 const LISTS = [
   FLEXIPLE,
   { ...FLEXIPLE, file: 'flexiple_pune.txt', city: 'pune', cityName: 'Pune' },
+  // shortcut: lists below were read through a page summariser, not copied by hand; spot-check before trusting.
+  { ...FLEXIPLE, file: 'flexiple_mum.txt', city: 'mum', cityName: 'Mumbai' },
+  { ...FLEXIPLE, file: 'flexiple_hyd.txt', city: 'hyd', cityName: 'Hyderabad' },
+  { ...FLEXIPLE, file: 'flexiple_chennai.txt', city: 'chennai', cityName: 'Chennai' },
   { file: 'gccjournal_blr.txt', city: 'blr', cityName: 'Bengaluru', source: 'dir_gccjournal', name: 'GCC Journal: GCCs in Bangalore',
     publisher: 'GCC Journal', url: 'https://gccjournal.in/insights/list-of-global-capability-centers-gcc-bangalore/',
     interest: 'Commercial GCC media and directory; interest not established',
