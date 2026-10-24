@@ -3,7 +3,7 @@
 // `--selftest` checks the company-name key.
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
-import { readCsv, writeCsv } from './csv';
+import { dbEnabled, loadTable, pruneTable, saveTable } from './db';
 import type { Row } from '../src/types';
 
 const DATA = new URL('../data/', import.meta.url);
@@ -45,10 +45,17 @@ if (process.argv.includes('--selftest')) {
   process.exit(0);
 }
 
-const table = (n: string) => readCsv(new URL(`${n}.csv`, DATA));
+const COLS = {
+  sources: ['source_id', 'name', 'publisher', 'url', 'published_date', 'type', 'conflict_of_interest', 'terms_note'],
+  parents: ['parent_id', 'name', 'hq_country', 'website_domain', 'sector'],
+  sites: ['site_id', 'entity_id', 'parent_id', 'city_id', 'function', 'maturity_stage', 'maturity_framework', 'opened_year'],
+  claims: ['claim_id', 'subject_type', 'subject_id', 'field', 'value', 'unit', 'period', 'source_id', 'source_date',
+    'retrieved_date', 'method', 'quote', 'page_ref', 'flag'],
+};
+const table = (n: keyof typeof COLS) => loadTable(n, COLS[n]);
 const keep = (rows: Row[], col: string) => rows.filter((r) => !r[col].startsWith('dir'));
 
-const sources = table('sources'), parents = table('parents'), sites = table('sites'), claims = table('claims');
+const sources = await table('sources'), parents = await table('parents'), sites = await table('sites'), claims = await table('claims');
 const outSources = [...keep(sources.rows, 'source_id')];
 const outParents = keep(parents.rows, 'parent_id');
 const outSites = keep(sites.rows, 'site_id');
@@ -91,8 +98,13 @@ for (const l of LISTS) {
   }
 }
 
-writeCsv(new URL('sources.csv', DATA), sources.headers, outSources);
-writeCsv(new URL('parents.csv', DATA), parents.headers, outParents);
-writeCsv(new URL('sites.csv', DATA), sites.headers, outSites);
-writeCsv(new URL('claims.csv', DATA), claims.headers, outClaims);
+const OUT = { sources: outSources, parents: outParents, sites: outSites, claims: outClaims };
+for (const name of ['sources', 'parents', 'sites', 'claims'] as const) await saveTable(name, COLS[name], OUT[name]);
+// Drop rows this script no longer generates, children first (claims, sites, parents, sources).
+if (dbEnabled) {
+  for (const [name, id] of [['claims', 'claim_id'], ['sites', 'site_id'], ['parents', 'parent_id'], ['sources', 'source_id']] as const) {
+    const n = await pruneTable(name, id, OUT[name]);
+    if (n) console.log(`pruned ${n} stale ${name} row(s) from Supabase`);
+  }
+}
 console.log(`${seen.size} parents/sites, ${n} claims from ${LISTS.length} lists`);

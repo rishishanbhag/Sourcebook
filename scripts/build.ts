@@ -59,16 +59,31 @@ const SPEC: Record<string, { cols: string[]; req: string[]; enums?: Record<strin
 // Units every count must carry, so company/entity/site numbers are never mixed.
 const COUNT_UNITS = ['company', 'entity', 'site', 'unstated'];
 
+// A match decision proposed by Claude (or marked as such in its note) is not a human review, so it is skipped.
+export const unreviewed = (d: Row) => d.decided_by === 'claude' || /not (yet )?reviewed/i.test(d.note ?? '');
+
 async function build() {
   const errors: string[] = [];
   const warnings: string[] = [];
   const t: Record<string, Row[]> = {};
 
+  // Supabase is the source of truth when configured (readTable retries each page). If it is still down, build
+  // everything from the committed data/*.csv export instead, never a mix of the two.
+  let fromDb: Record<string, Row[]> | null = null;
+  if (dbEnabled) {
+    try {
+      fromDb = {};
+      for (const [name, spec] of Object.entries(SPEC)) fromDb[name] = await readTable(name, spec.cols[0]);
+    } catch (e) {
+      fromDb = null;
+      warnings.push(`Supabase read failed after retries (${(e as Error).message}); built from the committed data/*.csv snapshot, which may be stale`);
+    }
+  }
+
   for (const [name, spec] of Object.entries(SPEC)) {
     const file = new URL(`${name}.csv`, DATA);
-    // Supabase is the source of truth when configured; CSVs remain the offline fallback.
-    if (!dbEnabled && !existsSync(file)) { errors.push(`data/${name}.csv is missing`); t[name] = []; continue; }
-    const { rows, headers } = dbEnabled ? { rows: await readTable(name, spec.cols[0]), headers: spec.cols } : readCsv(file);
+    if (!fromDb && !existsSync(file)) { errors.push(`data/${name}.csv is missing`); t[name] = []; continue; }
+    const { rows, headers } = fromDb ? { rows: fromDb[name], headers: spec.cols } : readCsv(file);
     if (headers.join() !== spec.cols.join()) {
       errors.push(`data/${name}.csv headers must be: ${spec.cols.join(',')}\n    found: ${headers.join(',')}`);
     }
@@ -110,8 +125,10 @@ async function build() {
   const claimRows = t.claims.length;
   const registers = REGISTERS.map((reg) => ({ reg, recs: loadRegister(reg, DATA) }));
   const knownCins = new Set(t.entities.map((e) => e.cin).filter(Boolean));
+  let skipped = 0;
   for (const d of t.match_decisions) {
     if (d.decision !== 'same') continue;
+    if (unreviewed(d)) { skipped++; continue; }
     const [lk, cin] = d.left_ref.split(':');
     const [rk, parentId] = d.right_ref.split(':');
     const found = registers.find((x) => x.reg.prefix === lk);
@@ -137,6 +154,8 @@ async function build() {
     t.claims.push({ ...base, claim_id: `${found.reg.prefix}_${cin}_parent`, field: 'parent_company', value: t.parents.find((p) => p.parent_id === parentId)!.name,
       method: 'derived', quote: `Matched by review${d.decided_date ? ` on ${d.decided_date}` : ''}${d.note ? `: ${d.note}` : ''}` });
   }
+
+  if (skipped) warnings.push(`${skipped} AI-proposed match(es) not applied: to confirm one, set decided_by to a person and remove "Not yet reviewed" from its note`);
 
   fk('entities', 'parent_id', 'parent');
   fk('sites', 'parent_id', 'parent');
@@ -267,6 +286,9 @@ function selftest() {
       { provider_id: 'b', status: 'gcc_confirmed' }],
   );
   assert.deepEqual(r.map((x) => [x.provider.provider_id, x.score]), [['b', 3], ['a', 2]]);
+  assert.ok(unreviewed({ decided_by: 'review_queue', note: 'Proposed by Claude: x. Not yet reviewed by a person.' }));
+  assert.ok(unreviewed({ decided_by: 'claude', note: '' }));
+  assert.ok(!unreviewed({ decided_by: 'rishi', note: 'Confirmed against MCA' }));
   console.log('build selftest passed');
 }
 

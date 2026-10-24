@@ -3,7 +3,8 @@
 // Candidates are NOT links: confirm each one in match_decisions.csv before it becomes an entity.
 // `--selftest` checks the pure helpers.
 import assert from 'node:assert/strict';
-import { readCsv, writeCsv } from './csv';
+import { writeCsv } from './csv';
+import { loadTable } from './db';
 
 const MCA_RA = 'RA000394';
 const alnum = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -27,7 +28,7 @@ if (process.argv.includes('--selftest')) {
 }
 
 const DATA = new URL('../data/', import.meta.url);
-const parents = readCsv(new URL('parents.csv', DATA)).rows;
+const parents = (await loadTable('parents', ['parent_id', 'name', 'hq_country', 'website_domain', 'sector'])).rows;
 const out: Record<string, string>[] = [];
 const today = new Date().toISOString().slice(0, 10);
 

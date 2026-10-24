@@ -5,6 +5,7 @@
 import { existsSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { readCsv, writeCsv } from './csv';
+import { loadTable, saveTable } from './db';
 import { REGISTERS, loadRegister } from './registers';
 import type { Row } from '../src/types';
 
@@ -39,11 +40,10 @@ const SUGGEST_SAME = 0.9;
 const QUEUE_COLS = ['score', 'suggestion', 'left_ref', 'left_name', 'left_state', 'right_ref', 'right_name', 'reasons', 'decision', 'note'];
 const DECISION_COLS = ['left_ref', 'right_ref', 'decision', 'decided_by', 'decided_date', 'note'];
 
-function run() {
+async function run() {
   const data = (f: string) => new URL(`../data/${f}`, import.meta.url);
-  const decisionsFile = data('match_decisions.csv');
-  const queueFile = data('review_queue.csv');
-  const decisions = readCsv(decisionsFile).rows;
+  const queueFile = data('review_queue.csv'); // derived scratch file, regenerated each run, so it stays CSV
+  const decisions = (await loadTable('match_decisions', DECISION_COLS)).rows;
   const decided = new Set(decisions.map((d) => `${d.left_ref}|${d.right_ref}`));
 
   // 1. Move filled-in queue rows into match_decisions.csv.
@@ -61,7 +61,7 @@ function run() {
       decided.add(`${q.left_ref}|${q.right_ref}`);
       moved++;
     }
-    writeCsv(decisionsFile, DECISION_COLS, decisions);
+    await saveTable('match_decisions', DECISION_COLS, decisions);
     console.log(`${moved} decision(s) moved to match_decisions.csv`);
   }
 
@@ -72,10 +72,11 @@ function run() {
     console.error('No entity register found (data/mca_filtered.csv or data/gleif_candidates.csv). Run npm run import:mca or npm run gleif first.');
     process.exit(1);
   }
-  const parents = readCsv(data('parents.csv')).rows;
-  const cityState = new Map(readCsv(data('cities.csv')).rows.map((c) => [c.city_id, c.state]));
-  const sites = readCsv(data('sites.csv')).rows;
-  const knownCins = new Set(readCsv(data('entities.csv')).rows.map((e) => e.cin).filter(Boolean));
+  const parents = (await loadTable('parents', ['parent_id', 'name', 'hq_country', 'website_domain', 'sector'])).rows;
+  const cityState = new Map((await loadTable('cities', ['city_id', 'name', 'state'])).rows.map((c) => [c.city_id, c.state]));
+  const sites = (await loadTable('sites', ['site_id', 'entity_id', 'parent_id', 'city_id', 'function', 'maturity_stage', 'maturity_framework', 'opened_year'])).rows;
+  const knownCins = new Set((await loadTable('entities', ['entity_id', 'parent_id', 'legal_name', 'cin', 'state', 'incorporation_date', 'mca_status'])).rows
+    .map((e) => e.cin).filter(Boolean));
   const parentStates = (id: string) => sites.filter((s) => s.parent_id === id).map((s) => cityState.get(s.city_id)!);
 
   const queue: Row[] = [];
@@ -124,4 +125,4 @@ function selftest() {
 }
 
 if (process.argv.includes('--selftest')) selftest();
-else run();
+else await run();

@@ -8,6 +8,7 @@
     "build": "npm run build:data && vite build",
     "approve": "tsx scripts/approve-submission.ts",
     "import:db": "tsx scripts/csv-to-db.ts",
+    "export:csv": "tsx scripts/db-to-csv.ts",
     "import:mca": "tsx scripts/import-mca.ts",
     "match": "tsx scripts/match.ts",
     "test": "tsx scripts/build.ts --selftest && tsx scripts/match.ts --selftest && tsx scripts/import-mca.ts --selftest && tsx scripts/load-directories.ts --selftest && tsx scripts/gleif.ts --selftest",
