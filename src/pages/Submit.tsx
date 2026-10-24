@@ -103,7 +103,11 @@ export default function Submit() {
         <button type="submit" disabled={busy || !token} className="h-9 rounded border border-black bg-black px-4 text-sm text-white disabled:opacity-40">
           {busy ? 'Sending...' : 'Submit'}
         </button>
-        {state && <p className={`text-sm ${state.ok ? '' : 'font-semibold'}`} role="status">{state.msg}</p>}
+        {state && (
+          <p role={state.ok ? 'status' : 'alert'} className={`rounded border px-3 py-2 text-sm font-semibold ${state.ok ? 'border-green-700 bg-green-50 text-green-800' : 'border-red-700 bg-red-50 text-red-800'}`}>
+            {state.ok ? '✓ ' : ''}{state.msg}
+          </p>
+        )}
         <Muted>Limited to a few submissions per hour.</Muted>
       </form>
     </Section>
