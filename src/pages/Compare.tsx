@@ -18,7 +18,11 @@ export default function Compare() {
   const rows = new Map<string, FactGroup>();
   for (const g of [...groups(a), ...groups(b)]) rows.set(keyOf(g), g);
   const ordered = [...rows.values()].sort((x, y) => label(x.field).localeCompare(label(y.field)) || x.period.localeCompare(y.period));
+  // A city with no city-level facts at all is planned, not half-sourced: say so once instead of a column of blanks.
+  const planned = (id: string) => groups(id).length === 0;
+  const cityName = (id: string) => cities.find((c) => c.city_id === id)?.name;
   const cell = (id: string, g: FactGroup) => {
+    if (planned(id)) return <span className="text-neutral-500">Planned</span>;
     const hit = groups(id).find((x) => keyOf(x) === keyOf(g));
     return hit ? <Fact g={hit} /> : NOT_SOURCED;
   };
@@ -32,13 +36,16 @@ export default function Compare() {
       <Filters>
         {[[a, setA], [b, setB]].map(([value, set], i) => (
           <Select key={i} aria-label={`City ${i + 1}`} value={value as string} onChange={(e) => (set as (v: string) => void)(e.target.value)}>
-            {cities.map((c) => <option key={c.city_id} value={c.city_id}>{c.name}, {c.state}</option>)}
+            {cities.map((c) => <option key={c.city_id} value={c.city_id}>{c.name}, {c.state}{planned(c.city_id) ? ' (planned)' : ''}</option>)}
           </Select>
         ))}
       </Filters>
       <Callout>
         Each row compares the same measure and period in both cities. A blank cell means no source has been found yet, not zero.
         Rents from different sources are not the same measure, so they sit on separate rows.
+        {[a, b].some(planned) && (
+          <> {[a, b].filter(planned).map(cityName).join(' and ')}: planned. The site list and state policy are sourced; city-level rent, vacancy and leasing figures are not added yet.</>
+        )}
       </Callout>
       <Table head={['Measure', ...pair.map((c) => c?.name)]}>
         <tr>

@@ -139,7 +139,7 @@ One page, eight tabs, plain black and white. The tab is a `useState` value (no r
 | Overview | Coverage ("1,249 sites = 33.50% of 3,728 sites") and every ecosystem-level number, one row per field, unit and period, with disagreeing sources visible |
 | Registry | Searchable table of all sites with filters (city, function, country, industry, entity linked); a detail card with site, company and legal-entity facts |
 | City pack | One city: rent and talent cost, state incentives, comparable sites, providers with delivery evidence |
-| Compare | Two cities side by side, one row per measure and period; "Not yet sourced" where a city has no figure (not zero) |
+| Compare | Two cities side by side, one row per measure and period; "Not yet sourced" where a city has no figure (not zero); a city with no city-level figures at all (Mumbai, Hyderabad, Chennai) shows "Planned" |
 | Incentives | States side by side, one row per incentive type; "No published figure" means none found, not zero |
 | Providers | Ranked providers with Confirmed, Self-reported and Disputed counts, and an evidence table per provider |
 | Submit | Public form to report a figure or a provider engagement (section 9) |
