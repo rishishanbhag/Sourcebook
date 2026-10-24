@@ -241,7 +241,10 @@ async function build() {
 
   const db: Db = {
     generated_at: today.toISOString(),
-    sources, parents: t.parents, entities: t.entities, sites, cities: t.cities, policies: t.policies,
+    sources, parents: t.parents, entities: t.entities, sites,
+    // A city with no site and no claim has nothing to show, so it stays out of the dropdowns until a source mentions it.
+    cities: t.cities.filter((c) => subjectsWithClaims.has(`city:${c.city_id}`) || t.sites.some((s) => s.city_id === c.city_id)),
+    policies: t.policies,
     providers: t.providers, engagements: t.engagements, facts, coverage: { sites: sites.length, reference },
   };
   mkdirSync(new URL('../public/', import.meta.url), { recursive: true }); // public/ is not in git, so a fresh checkout lacks it
