@@ -8,11 +8,11 @@ A private, sourced record of India's Global Capability Centres (GCCs). Every fac
 
 "Single source of truth" is the goal. Today this is a **single place where every fact sits next to its evidence**, not a verified or complete list.
 
-- It lists **431 sites** (261 Bengaluru, 169 Pune, 1 from a press release), mostly from two commercial web directories. That is **11.56%** of the 3,728 sites Nasscom-Zinnov counts (the Overview shows this).
+- It lists **1,249 sites** (Hyderabad 296, Mumbai 280, Bengaluru 262, Chennai 242, Pune 169; one Bengaluru site is from a press release), mostly from two commercial web directories. That is **33.50%** of the 3,728 sites Nasscom-Zinnov counts (the Overview shows this).
 - The directory lists have not been checked against a primary source, and their terms of use have not been checked.
 - **No legal entities are linked yet.** 48 GLEIF matches were proposed by Claude and are not reviewed by a person, so the build skips them (section 6).
-- Of the 7 sources copied from the project brief, only Nasscom-Zinnov has been checked. The other 6 are marked `[UNVERIFIED]` with no URL.
-- Still thin or empty: talent cost, rents for Chennai, Hyderabad, Mumbai and Ahmedabad, opening years, and most providers.
+- Of the sources copied from the project brief, only Nasscom-Zinnov has been fully checked. Six sources have no URL: CBRE, CII-Deloitte, Savills, Vestian, the Economic Survey (its figure was seen in news coverage, not in the PDF) and the MCA master. All except the Economic Survey are marked `[UNVERIFIED]`; so are the Karnataka and Maharashtra policy copies, which are third-party hosted.
+- Still thin or empty: talent cost, rents for Chennai, Hyderabad and Mumbai, opening years, and most providers.
 
 ## 2. How it fits together
 
@@ -71,7 +71,7 @@ All columns are text and blank means empty. `build.ts` (`SPEC`) and `supabase/sc
 
 | What | Source | How | Caveat |
 |---|---|---|---|
-| 431 sites, company names, HQ country, sector | GCC Journal Bengaluru, Flexiple Bengaluru (first 248 of 437), Flexiple Pune (all 169) | Pages saved to `data/raw/*.txt`, loaded by `npm run load:dirs` | Commercial directories, not primary sources; terms not checked |
+| 1,249 sites, company names, HQ country, sector | GCC Journal Bengaluru; Flexiple Bengaluru (first 248 of 437), Pune (all 169), Mumbai, Hyderabad, Chennai (read through a page summariser, not copied by hand: spot-check) | Pages saved to `data/raw/*.txt`, loaded by `npm run load:dirs` | Commercial directories, not primary sources; terms not checked |
 | GCC counts, employees, broker leasing shares | Project brief | Typed in as claims | 2,117, 3,728 and 2.36 million checked against Zinnov's report page; the rest unverified |
 | Office rent and leasing, Bengaluru and Pune | Knight Frank H1 2026 (page 13); Embassy REIT databook Q1 FY27 (page 6); Punekar News, Free Press Journal and a KPMG report for Pune | Read by hand, typed as claims | Brokers and a landlord have commercial interests; the two Pune GCC-share figures cover different periods, so they are separate rows |
 | Provider engagements | Ferguson press release (names ANSR), ANSR customers page, TT&A announcement | Read by hand | Only Ferguson's is `gcc_confirmed`; the rest are self-reported |
@@ -126,7 +126,7 @@ The problem: "Acme Technology India Pvt Ltd" in a government register versus "Ac
 
 **Human review is required.** A "same" decision is skipped by the build if `decided_by` is `claude` or its note says "Not yet reviewed". All 48 current rows are in that state, and the build warns about them. To confirm one, set `decided_by` to a person and remove "Not yet reviewed" from the note. 67 more pairs are open in the review queue.
 
-The directory loader uses a cruder rule: companies in the web lists are the same if they share a first word, with exceptions for Fidelity, Siemens, "American" and "First". That can wrongly merge companies, so spot-check it.
+The directory loader uses a cruder rule: companies in the web lists are the same if they share a first word, with a leading "The" ignored and two-word names for Fidelity, Siemens, "American", "First", GE, T-, Western, NCR and Hitachi. That can still merge related group companies (for example Samsung Electronics and Samsung SDS) and split one company written two ways (Nielsen and NielsenIQ), so spot-check it.
 
 ## 7. The app (`src/`)
 
@@ -136,7 +136,7 @@ One page, eight tabs, plain black and white. The tab is a `useState` value (no r
 
 | Tab | What it shows |
 |---|---|
-| Overview | Coverage ("431 sites = 11.56% of 3,728 sites") and every ecosystem-level number, one row per field, unit and period, with disagreeing sources visible |
+| Overview | Coverage ("1,249 sites = 33.50% of 3,728 sites") and every ecosystem-level number, one row per field, unit and period, with disagreeing sources visible |
 | Registry | Searchable table of all sites with filters (city, function, country, industry, entity linked); a detail card with site, company and legal-entity facts |
 | City pack | One city: rent and talent cost, state incentives, comparable sites, providers with delivery evidence |
 | Compare | Two cities side by side, one row per measure and period; "Not yet sourced" where a city has no figure (not zero) |

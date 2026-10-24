@@ -27,9 +27,10 @@ const LISTS = [
 ];
 
 // Same company across lists: first word of the name, except where that merges different companies.
-const FULL_NAME = ['fidelity', 'siemens', 'american', 'first'];
+const FULL_NAME = ['fidelity', 'siemens', 'american', 'first', 'ge', 't', 'western', 'ncr', 'hitachi'];
 export function key(name: string) {
   const words = name.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
+  if (words[0] === 'the' && words.length > 1) words.shift(); // "The Walt Disney Company" and "The Cigna Group" are not one company
   const k = words[0].startsWith('jpmorgan') ? 'jpmorgan' : words[0];
   return FULL_NAME.includes(k) ? words.slice(0, 2).join('_') : k;
 }
@@ -43,6 +44,9 @@ if (process.argv.includes('--selftest')) {
   assert.equal(key('Microsoft India Development Center'), key('Microsoft'));
   assert.notEqual(key('Fidelity Investments'), key('Fidelity International'));
   assert.notEqual(key('American Express'), key('First American'));
+  for (const [a, b] of [['The Walt Disney Company', 'The Cigna Group'], ['The D. E. Shaw Group', 'The Cigna Group'], ['GE HealthCare', 'GE Vernova'],
+    ['T-Systems International', 'T-Mobile US'], ['Western Union', 'Western Digital'], ['NCR Atleos', 'NCR Voyix'],
+    ['Hitachi Vantara', 'Hitachi Energy']]) assert.notEqual(key(a), key(b), `${a} vs ${b}`);
   assert.equal(fn('BFSI'), 'finance');
   assert.equal(fn('Retail'), 'mixed');
   console.log('load-directories self-test passed');
