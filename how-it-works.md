@@ -282,7 +282,7 @@ The CSVs started with only the brief's headline figures, so there were no sites,
 - `build.ts` checks everything again, so an approval with a bad subject id fails the build and publishes nothing.
 
 **Known limits**
-- **No captcha yet.** Only the rate limit stands in the way of spam, and spam only reaches your review queue, never the site. Add Cloudflare Turnstile before the site goes public (marked `shortcut:` in the function).
-- The function allows requests from any origin (`Access-Control-Allow-Origin: *`); restrict it to the site's address at launch.
+- **Captcha:** the form uses Cloudflare Turnstile and the function verifies the token before saving. Needs `VITE_TURNSTILE_SITE_KEY` (browser) and the `TURNSTILE_SECRET` function secret.
+- **CORS:** the function only answers the origins listed in the `ALLOWED_ORIGINS` secret. This stops other websites' browsers, not scripts; the captcha and rate limit cover those.
 - Approval is manual: run `npm run approve -- <id>`, then `npm run build:data` and redeploy. After the site is deployed, set `BUILD_HOOK_URL` (the host's build-hook address) and approving will rebuild the site automatically.
 - Submissions are reviewed one at a time in the Supabase table editor; there is no admin page yet.

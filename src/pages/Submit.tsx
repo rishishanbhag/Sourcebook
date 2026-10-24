@@ -1,9 +1,12 @@
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { DbCtx } from '../Fact';
 import { Callout, Card, Input, Muted, Section, Select } from '../components/ui';
 
 const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit`;
 const SUBJECTS = ['parent', 'entity', 'site', 'city', 'policy', 'provider', 'ecosystem'];
+
+type Turnstile = { render: (el: HTMLElement, o: { sitekey: string; callback: (t: string) => void; 'expired-callback': () => void }) => string; reset: (id?: string) => void };
+const TS_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="block text-sm"><span className="mb-1 block font-semibold">{label}</span>{children}</label>;
@@ -16,6 +19,19 @@ export default function Submit() {
   const [contact, setContact] = useState('');
   const [state, setState] = useState<{ ok: boolean; msg: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [token, setToken] = useState('');
+  const box = useRef<HTMLDivElement>(null);
+  const widget = useRef<string>();
+  const ts = () => (window as unknown as { turnstile?: Turnstile }).turnstile;
+
+  useEffect(() => {
+    const mount = () => { if (box.current && !widget.current) widget.current = ts()!.render(box.current, { sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY, callback: setToken, 'expired-callback': () => setToken('') }); };
+    if (ts()) { mount(); return; }
+    const s = document.createElement('script');
+    s.src = TS_SRC; s.async = true; s.onload = mount;
+    document.head.appendChild(s);
+  }, []);
+
   const set = (k: string) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
   const bind = (k: string) => ({ value: f[k] ?? '', onChange: set(k) });
 
@@ -26,12 +42,13 @@ export default function Submit() {
       const res = await fetch(FN_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_ANON_KEY, Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ kind, payload: f, contact }),
+        body: JSON.stringify({ kind, payload: f, contact, captcha: token }),
       });
       const body = await res.json().catch(() => ({}));
       if (res.ok) { setState({ ok: true, msg: 'Received. It will be reviewed before anything is shown, and shown with its source.' }); setF({ subject_type: 'parent', anonymised: 'n' }); }
       else setState({ ok: false, msg: body.error ?? 'Something went wrong, please retry.' });
     } catch { setState({ ok: false, msg: 'Network error, please retry.' }); }
+    ts()?.reset(widget.current); setToken('');
     setBusy(false);
   }
 
@@ -82,7 +99,8 @@ export default function Submit() {
           <Field label="Your email (optional, never shown)"><Input type="email" value={contact} onChange={(e) => setContact(e.target.value)} /></Field>
         </Card>
 
-        <button type="submit" disabled={busy} className="h-9 rounded border border-black bg-black px-4 text-sm text-white disabled:opacity-40">
+        <div ref={box} />
+        <button type="submit" disabled={busy || !token} className="h-9 rounded border border-black bg-black px-4 text-sm text-white disabled:opacity-40">
           {busy ? 'Sending...' : 'Submit'}
         </button>
         {state && <p className={`text-sm ${state.ok ? '' : 'font-semibold'}`} role="status">{state.msg}</p>}
